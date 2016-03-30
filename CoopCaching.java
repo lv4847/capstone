@@ -1,5 +1,15 @@
+/**
+ * This class starts the cooperative caching algorithm
+ *
+ * @author Lohit Velagapudi
+ */
 class CoopCaching{
 
+     /**
+      * This method starts each client as an individual thread
+      *
+      * @return Client[] client array of client objects
+      */
      public void startAlgorithm(Client[] client){
           try{
                for(int i=0; i<client.length; i++){
@@ -13,7 +23,4 @@ class CoopCaching{
           }
      }
 
-     //public int diskAccess();
-
-     //public int cacheHits();
 }

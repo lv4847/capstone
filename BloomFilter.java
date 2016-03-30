@@ -1,9 +1,21 @@
 import java.math.BigInteger;
-
+/**
+ * This class is an implementation of Bloom Filter
+ *
+ * @author Lohit Velagapudi
+ *
+ */
 class BloomFilter{
      int[] filter;
      int filterSize;
 
+     /**
+      * The constructor sets the bloomfilter size and
+      * initializes all the bits of the bloomfilter to 0
+      *
+      * @param filterSize int the size of the bloomfilter
+      * 
+      */
      public BloomFilter(int filterSize){
           this.filterSize=filterSize;
           filter=new int[filterSize];
@@ -13,6 +25,11 @@ class BloomFilter{
           }
      }
 
+     /**
+      * This method represents a new element in bloomfilter
+      *
+      * @param input String data to be represented
+      */
      public void addSeenMember(String input){
           Hash forInput=new Hash(input);
           int[] bits=forInput.getBits(filterSize);
@@ -23,6 +40,14 @@ class BloomFilter{
           }
      }
 
+     /**
+      * This method returns false if a data has not been 
+      * represented in the bloomfilter or else true
+      * The data may have been represented if it returns true
+      *
+      * @param input String the data being looked up for
+      * @return boolean false if data not present, true if data may be present
+      */
      public boolean isSeen(String input){
           Hash forInput=new Hash(input);
           int[] bits=forInput.getBits(filterSize);

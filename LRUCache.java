@@ -3,24 +3,41 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Iterator;
 
-class LRUCache extends LinkedHashMap{
+/**
+ * This class is LRUCache implementation
+ *
+ * @author Lohit Velagapudi
+ */
+class LRUCache<K, V> extends LinkedHashMap<K, V>{
 
      private int size;
-     
+
+     /**
+      * The constructor
+      * 
+      * @param int size size of LRUCache
+      */
      public LRUCache(int size){
           super(size, 0.7f, true);
           this.size=size;
      }
 
-     protected boolean removeEldestEntry(Map.Entry eldest){
+     /**
+      * This method checks the size of the LRUCahce
+      * and decides when to eliminate the least recently used
+      */
+     protected boolean removeEldestEntry(Map.Entry<K, V> eldest){
           return size()>size;
      }
 
+     /**
+      * This method returns least recently used value in cache
+      */
      public Object getLRU(){
           Set set=this.entrySet();
           Iterator itr=set.iterator();
           if(itr.hasNext()){
-               Map.Entry me=(Map.Entry) itr.next();
+               Map.Entry<K, V> me=(Map.Entry<K, V>) itr.next();
                return me.getValue();
           }
           return null;

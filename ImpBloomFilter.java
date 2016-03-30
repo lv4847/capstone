@@ -1,16 +1,32 @@
 import java.util.Random;
 import java.math.BigInteger;
 import java.util.HashSet;
-
+/**
+ * This class is an implementation of Importance-Aware Bloom Filter
+ *
+ * @author Lohit Velagapudi
+ */
 class ImpBloomFilter extends BloomFilter{
 
      private int p;
 
+     /**
+      * The constructor
+      *
+      * @param int filterSize size of IBF
+      */
      public ImpBloomFilter(int filterSize){
           super(filterSize);
           p=4;
      }
-     
+
+     /**
+      * This method checks if a particular data is represented
+      * in the IBF. The bits representing the data are also incremented
+      * everytime the data is seen.
+      *
+      * @param String input data to be checked
+      */
      public boolean isSeen(String input){
           Hash forInput=new Hash(input);
           int[] bits=forInput.getBits(filterSize);
@@ -29,7 +45,10 @@ class ImpBloomFilter extends BloomFilter{
           return true;
      }
 
-     public void decrementCells(){
+     /**
+      * This method randomly decrements p bits
+      */
+     private void decrementCells(){
           Random randNum=new Random();
           int i=0;
           while(i<p){

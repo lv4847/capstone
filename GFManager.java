@@ -1,32 +1,64 @@
+/**
+ * This manager class is specific for Greedy Forwarding
+ *
+ * @author Lohit Velagapudi
+ */
 class GFManager extends Manager{
 
+     /**
+      * The constructor
+      *
+      * @param int cacheSize size of cache
+      * @param BloomFilter bf bloomfilter object
+      * @param Server server server object
+      */
      public GFManager(int cacheSize, BloomFilter bf, Server server){
           super(cacheSize, bf, server);
      }
-     
-     public void add(int newVal, Client client){
+
+     /**
+      * This method adds block id and client object holding
+      * the block to the cache
+      *
+      * @param int blockId block id 
+      * @param Client client client object
+      */
+     public void add(int blockId, Client client){
           synchronized(cache){  
-               cache.put(newVal, client);
+               cache.put(blockId, client);
                //System.out.println("Yes mgr");
-               bf.addSeenMember(""+newVal);
+               bf.addSeenMember(""+blockId);
           }     
      }
 
-     public Client getClient(int newVal){
+     /**
+      * This method returns the Client object holding the block
+      *
+      * @param int blockId block id
+      */
+     public Client getClient(int blockId){
           synchronized(cache){
-               if(bf.isSeen(""+newVal)){
-                    return (Client)cache.get(newVal);
+               if(bf.isSeen(""+blockId)){
+                    return cache.get(blockId);
                }
                return null;
           }     
      }
 
-     public void delete(int val){
+     /**
+      * This method deletes the block id from the cache
+      *
+      * @param int blockId block id
+      */
+     public void delete(int blockId){
           synchronized(cache){
-               cache.remove(val);
+               cache.remove(blockId);
           }     
      }
 
+     /**
+      * This method is not used in Greedy Forwarding
+      */
      public boolean isSinglet(int blockId){
           return false;
      }

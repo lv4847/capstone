@@ -10,7 +10,11 @@ import java.io.FileOutputStream;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.Scanner;
-
+/**
+ * This class initiates the experiment and has the main method
+ *
+ * @author Lohit Velagapudi
+ */
 class Simulator{
      private Server server;
      private Client[] client;
@@ -38,7 +42,13 @@ class Simulator{
      //private int mgrCacheSize;
      //private int bfSize;
      private String traceFile;
-      
+
+     /**
+      * This method processes the input file and sets the parameters
+      * for the experiment
+      *
+      * @param String filename input file name
+      */
      void readInputFile(String fileName) throws FileNotFoundException, IOException{
           Properties prop=new Properties();
           FileInputStream inputFile=new FileInputStream(fileName);
@@ -64,6 +74,10 @@ class Simulator{
           }
      }
 
+     /**
+      * This method records the experiment results by varying the
+      * client cache size or number of clients
+      */
      public void generateResults() throws FileNotFoundException, IOException{
           
           System.out.println("Starting....");
@@ -90,6 +104,13 @@ class Simulator{
           System.out.println("End");
      }
 
+     /**
+      * This method adds data to the cache of clients and manager
+      *
+      * @param int clients number of clients
+      * @param int cacheSizeClient size of the client cache
+      * @return boolean true if loading data successfull or else false
+      */
      private boolean loadData(int clients, int cacheSizeClient) throws FileNotFoundException, IOException{
           server=new Server(diskSize);
                     
@@ -126,6 +147,13 @@ class Simulator{
           return true;
      }
 
+     /**
+      * This method runs the algorithm for each case i.e. number of clients
+      * and client cache size
+      *
+      * @param int var value changing for each run
+      * @param Filewriter writer for writing to the ouput file
+      */
      private void runCachingAlgorithm(int var, FileWriter writer) throws IOException{
           System.out.println("Running..");
           CoopCaching cacheAlgo=new CoopCaching();
@@ -138,7 +166,6 @@ class Simulator{
           for(int i=0; i<client.length; i++){
                hitCount=hitCount+client[i].getHitCount();
                falsePositive=falsePositive+client[i].getFalsePositives();
-               //System.out.println("Client "+i+" "+client[i].deleteCount);
           }
           System.out.println("Hit Count: "+ hitCount);
           System.out.println("Disk Access: "+server.diskAccessCount());
@@ -152,6 +179,14 @@ class Simulator{
           return null;
      }*/
 
+     /**
+      * This method returns specific Client object for a caching algorithm
+      * @param int id client identifier
+      * @param int cacheSize size of the client cache
+      * @param BloomFilter bf the bloomfilter or IBF object
+      * @param Manager mgr the manager object
+      * @param Client[] client list of client objects
+      */
      private Client getClient(int id, int cacheSize, BloomFilter bf, Manager mgr, Client[] client){
           if(cachingAlgo==1) return new GFClient(id, cacheSize, bf, mgr);
           else if(cachingAlgo==2) return new NCClient(id, cacheSize, bf, mgr, client);
@@ -159,13 +194,24 @@ class Simulator{
           return null;
      }
 
+     /**
+      * This method returns specific Manager object for a caching algorithm
+      * @param int cacheSize size of cache
+      * @param BloomFilter bf bloomfilter object
+      * @param Server server server object
+      */
      private Manager getManager(int cacheSize, BloomFilter bf, Server server){
           if(cachingAlgo==1) return new GFManager(cacheSize, bf, server);
           else if(cachingAlgo==2) return new NCManager(cacheSize, bf, server);
           //else if(cachingAlgo==3) return new Robinhood();
           return null;
      }
-     
+
+     /**
+      * The main method
+      *
+      * @param String[] args input file name
+      */
      public static void main(String[] args){
           try{
                //System.out.print("Input File: ");

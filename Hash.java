@@ -2,19 +2,32 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+/**
+ * This class provides hash values for a particular data
+ *
+ * @author Lohit Velagapudi
+ */
 class Hash{
 
      private BigInteger sha1Value;
      private BigInteger md5Value;
-     
-     //BigInteger hashValue;
-     
+
+     /**
+      * The constructor
+      *
+      * @param String input data whose hash values reqd
+      */
      public Hash(String input){
           sha1Value=sha1(input);
           md5Value=md5(input);
-          //System.out.println(sha1Value+" "+md5Value);
      }
 
+     /**
+      * This method returns an array of hash values for a data
+      * The array size is 4
+      *
+      * @param int max max range 
+      */
      public int[] getBits(int max){
           int[] bits=new int[4];
           bits[0]=sha1Value.add(md5Value.multiply(BigInteger.valueOf(1))).mod(BigInteger.valueOf(max)).intValue();
@@ -23,7 +36,12 @@ class Hash{
           bits[3]=sha1Value.add(md5Value.multiply(BigInteger.valueOf(4))).mod(BigInteger.valueOf(max)).intValue();
           return bits;
      }
-     
+
+     /**
+      * SHA1 hash function
+      * 
+      * @param String input data to be hashed
+      */
      private BigInteger sha1(String input) {
 		try {
 			MessageDigest output = MessageDigest.getInstance("SHA1"); 
@@ -35,6 +53,11 @@ class Hash{
 		return null;
 	}
 
+     /**
+      * MD5 hash function
+      *
+      * @param String input data to be hashed
+      */
 	private BigInteger md5(String input) {
 		try {
 			MessageDigest output = MessageDigest.getInstance("MD5"); 

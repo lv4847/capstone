@@ -14,7 +14,7 @@ class BloomFilterTester{
      private String inputTrace;
      private int bfType;
      private BloomFilter bf;
-     private LRUCache cache;
+     private LRUCache<Integer, Integer> cache;
      private String outfileBFSizeVary;
      private String outfileRequestVary;
 
@@ -23,7 +23,7 @@ class BloomFilterTester{
                FileWriter bfVaryWriter=new FileWriter(outfileBFSizeVary);
                bfVaryWriter.write("bfsize/cacheSize, false positive\n");
                for(int i=1; i<=10; i++){
-                    cache=new LRUCache(cacheSize);
+                    cache=new LRUCache<Integer, Integer>(cacheSize);
                     if(bfType==1) bf=new BloomFilter(cacheSize*i);
                     else if(bfType==2) bf=new ImpBloomFilter(cacheSize*i);
                     cacheLoadData();
