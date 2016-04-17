@@ -6,20 +6,28 @@ class Server{
      private Block[] block;
      private int diskSize;
      private int diskAccess;
+     private int diskAccessTicks;
+     private int ticks;
 
      /**
       * The constructor
       * 
       * @param int diskSize size of the disk
       */
-     public Server(int diskSize){
+     public Server(int diskSize, int diskAccessTicks){
           this.diskSize=diskSize;
           this.diskAccess=0;
           this.block=new Block[diskSize];
+          this.diskAccessTicks=diskAccessTicks;
+          this.ticks=0;
           
           for(int i=0; i<diskSize; i++){
                block[i]=new Block(i);
           }
+     }
+
+     public long getTotalTicks(){
+          return ticks;
      }
 
      /**
@@ -31,6 +39,7 @@ class Server{
       */
      public Block getBlock(int id){
           diskAccess++;
+          ticks+=diskAccessTicks;
           if(id<diskSize) {               
                return block[id];
           }

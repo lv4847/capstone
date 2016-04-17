@@ -13,10 +13,14 @@ import java.io.IOException;
 abstract class Client extends Thread{
      protected int id;
      protected LRUCache<Integer, Block> cache;
+     protected int cacheSize;
      protected BloomFilter bf;
      protected Manager mgr;
      protected int hitCount;
      protected int falsePositive;
+     protected int localCacheTicks;
+     protected int ticks;
+     private int requestCount;
 
      /**
       * The constructor
@@ -26,15 +30,47 @@ abstract class Client extends Thread{
       * @param BloomFilter bf the bloomfilter or IBF object
       * @param Manager mgr the manager object
       */
-     public Client(int id, int cacheSize, BloomFilter bf, Manager mgr){
+     public Client(int id, int cacheSize, BloomFilter bf, Manager mgr, int localCacheTicks){
           this.id=id;
           this.cache=new LRUCache<Integer, Block>(cacheSize);
+          this.cacheSize=cacheSize;
           this.bf=bf;
           this.mgr=mgr;
           this.hitCount=0;
           this.falsePositive=0;
+          this.localCacheTicks=localCacheTicks;
+          this.ticks=0;
+          this.requestCount=0;
      }
 
+     /**
+      * This method returns the Local Cache Ticks
+      */
+     public long getTotalTicks(){
+          return ticks; 
+     }
+
+     /**
+      * This method returns the number of requests received
+      */
+     public int getRequestCount(){
+          return requestCount;
+     }
+
+     /**
+      * This method returns the client id
+      */
+     public int getClientId(){
+          return id;
+     }
+
+     /**
+      * This method returns the client cache size
+      */
+     public int getCacheSize(){
+          return cache.size();
+     }
+     
      /**
       * getter for hit count
       * 
@@ -53,6 +89,7 @@ abstract class Client extends Thread{
           return falsePositive;
      }
 
+     
      /**
       * This method is used to add contents to the 
       * client cache before the experiment starts
@@ -60,13 +97,15 @@ abstract class Client extends Thread{
       * Every data added to the cache is added to
       * the global cache aswell
       *
-      * @param int newVal block id
+      * @param int blockId block id
       */
-     public void initAddCache(int newVal){
-          synchronized(cache){
-               cache.put(newVal, new Block(newVal));
-               bf.addSeenMember(""+newVal);
-               mgr.add(newVal, this);
+     public void initAddCache(int blockId){
+          synchronized(mgr){
+               synchronized(cache){
+                    cache.put(blockId, new Block(blockId));
+                    bf.addSeenMember(""+blockId);
+                    mgr.add(blockId, this);
+               }
           }     
      }
 
@@ -85,52 +124,67 @@ abstract class Client extends Thread{
       * @param int blockId block id to be found
       * @return Block  returns the block with the blockId or null 
       */
-     public abstract Block getBlock(int blockId);
+     public Block getBlock(int blockId, boolean fromServer){
+          synchronized(cache){
+               if(!fromServer) ticks+=localCacheTicks;
+               if(bf.isSeen(""+blockId)){
+                    Block block=null;
+                    if(fromServer && cache.containsKey(blockId)){
+                        block=new Block(blockId); 
+                    }    
+                    else if (!fromServer) block=cache.get(blockId);
+                    if(block!=null){
+                         hitCount++;
+                         return block;
+                    }
+                    else falsePositive++;
+               }
+               return null;
+          }
+     }
      
 
      /**
       * This method reads a trace file with the same name as the client Id
       */
      public void readTrace() throws FileNotFoundException, IOException{
-          File file=new File("E:\\capstone\\trace\\"+id+".txt");
-          //File file=new File(id+".txt");
+          File file=new File("trace\\"+id+".txt");
+   
           FileReader freader=new FileReader(file);
           BufferedReader breader=new BufferedReader(freader);
           String line=null;
-          //writer=new FileWriter("outputlog"+id+".txt");
+          
           while((line=breader.readLine())!=null){
                int traceVal=Integer.parseInt(line);
-               findBlock(traceVal);               
+               findBlock(traceVal);
+               requestCount++;               
           }
-          //writer.close();
      }
 
      /**
       * This method receives the value from the trace file to be looked for
       *
-      * @param int val the block id to be looked for
+      * @param int request the block id to be looked for
       */
-     private void findBlock(int val) throws IOException, FileNotFoundException{
-          //System.out.println("Client "+id+" looking for "+val);
-          
-          Block data=getBlock(val);
+     private void findBlock(int request) throws IOException, FileNotFoundException{
+          Block data=getBlock(request, false);
           if(data==null){
-               //writer.write("Lookup: "+val+" Client Id "+id+"\nClient");
-               //display(writer);
-               Client otherClient=mgr.getClient(val);
-               if(otherClient!=null) {
-                    data=otherClient.getBlock(val);
-                    //System.out.println("Found at Client "+otherClient.id);
-               }
-               if(data==null) {
-                    //writer.write("Manager: ");
-                    //mgr.display(writer);
-                    data=mgr.getFromServer(val);
-                    //System.out.println("Requested from Server");
-               }
-
-               if(data!=null) addBlock(data);        
+               synchronized(mgr){
+                    data=mgr.getBlock(request);
+               }        
           }
+          if(data!=null){
+              addBlock(data);
+          }
+     }
+
+     /**
+      * This method returns the LRUCache of Client
+      */
+     public LRUCache getCache(){
+          synchronized(mgr){
+               return cache;
+          }     
      }
 
      /**
@@ -143,12 +197,6 @@ abstract class Client extends Thread{
                e.printStackTrace();
           }     
      }
-     
-     /*public void display(FileWriter writer) throws IOException, FileNotFoundException{
-          synchronized(cache){
-               writer.write(cache.toString()+"\n");
-          }     
-     }*/
      
      
 }

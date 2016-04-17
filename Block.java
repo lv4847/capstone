@@ -17,7 +17,7 @@ class Block{
       */
      public Block(int id){
           this.id=id;
-          this.recirculationCount=7;
+          this.recirculationCount=10;
      }
 
      /**

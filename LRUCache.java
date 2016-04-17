@@ -10,6 +10,8 @@ import java.util.Iterator;
  */
 class LRUCache<K, V> extends LinkedHashMap<K, V>{
 
+     private static final long serialVersionUID = 123456789;
+
      private int size;
 
      /**
@@ -34,8 +36,8 @@ class LRUCache<K, V> extends LinkedHashMap<K, V>{
       * This method returns least recently used value in cache
       */
      public Object getLRU(){
-          Set set=this.entrySet();
-          Iterator itr=set.iterator();
+          Set<Map.Entry<K, V>> set=this.entrySet();
+          Iterator<Map.Entry<K, V>> itr=set.iterator();
           if(itr.hasNext()){
                Map.Entry<K, V> me=(Map.Entry<K, V>) itr.next();
                return me.getValue();

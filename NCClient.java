@@ -6,7 +6,7 @@ import java.util.Random;
  */
 class NCClient extends Client{
 
-     Client[] client;
+     private Client[] client;
 
      /**
       * The constructor
@@ -17,8 +17,8 @@ class NCClient extends Client{
       * @param Manager mgr the manager object
       * @param Client[] client list of client objects
       */
-     public NCClient(int id, int cacheSize, BloomFilter bf, Manager mgr, Client[] client){
-          super(id, cacheSize, bf, mgr);
+     public NCClient(int id, int cacheSize, BloomFilter bf, Manager mgr, Client[] client, int localCacheTicks){
+          super(id, cacheSize, bf, mgr, localCacheTicks);
           this.client=client;
      }
 
@@ -31,48 +31,30 @@ class NCClient extends Client{
      public void addBlock(Block data){
           Block lru=null;
           int next=-1;
-          synchronized(cache){
-                lru=(Block)cache.getLRU();
-                if(lru!=null && mgr.isSinglet(lru.getId())){
-                    if(lru.getRecirculationCount()>0){
-                      lru.decrementRecirculationCount();
-                      Random randNum=new Random();
-                      next=id;
-                      while(next==id){
-                         next=randNum.nextInt(client.length);
-                      }
-                    }     
-                    Client c=mgr.getClient(lru.getId());
-                    if(c!=null && c.id==this.id) mgr.delete(lru.getId()); 
-                }               
-               cache.put(data.getId(), data);
-               bf.addSeenMember(""+data.getId());
-               mgr.add(data.getId(), this);              
+          synchronized(mgr){
+               synchronized(cache){
+                     lru=(Block)cache.getLRU();
+                     if(lru!=null && ((NCManager)mgr).isSinglet(lru.getId())){
+                         if(lru.getRecirculationCount()>0){
+                                lru.decrementRecirculationCount();
+                                Random randNum=new Random();
+                                next=id;
+                                while(next==id){
+                                   next=randNum.nextInt(client.length);
+                                }
+                         }      
+                     }               
+
+                    if(cache.size()==cacheSize) mgr.delete(lru.getId(), this); 
+                    cache.put(data.getId(), data);
+                    bf.addSeenMember(""+data.getId());
+                    mgr.add(data.getId(), this);              
+               }
           }
-          if(next!=-1){
+          if(next!=-1 && lru!=null){
                client[next].addBlock(lru);
           }     
      }
 
-     /**
-      * This method returns the requested block and keeps
-      * count of cache hits and false positives
-      *
-      * @param int blockId id of block being requested
-      * @return Block returns Block if present or else null
-      */
-     public Block getBlock(int blockId){
-          synchronized(cache){
-               if(bf.isSeen(""+blockId)){
-                    Block block=cache.get(blockId);
-                    if(block!=null){
-                         hitCount++;
-                         return block;
-                    }
-                    else falsePositive++;
-               }
-               return null;
-          }
-     }
 
 }

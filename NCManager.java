@@ -1,4 +1,8 @@
 import java.util.HashMap;
+import java.util.Set;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.HashSet;
 /**
  * This manager class is specific for N-Chance
  *
@@ -6,7 +10,7 @@ import java.util.HashMap;
  */
 class NCManager extends Manager{
      private HashMap<Integer, Integer> blockCount;
-
+     
      /**
       * The constructor
       *
@@ -14,8 +18,8 @@ class NCManager extends Manager{
       * @param BloomFilter bf bloomfilter object
       * @param Server server server object
       */
-     public NCManager(int cacheSize, BloomFilter bf, Server server){
-          super(cacheSize, bf, server);
+     public NCManager(int cacheSize, BloomFilter bf, Server server, int globalCacheTicks){
+          super(cacheSize, bf, server, globalCacheTicks);
           blockCount=new HashMap<Integer, Integer>();
      }
 
@@ -28,48 +32,56 @@ class NCManager extends Manager{
       * @param Client client client object
       */
      public void add(int blockId, Client client){
-          synchronized(cache){
-               cache.put(blockId, client);
-               bf.addSeenMember(""+blockId);
-               if(blockCount.containsKey(blockId)){
-                    blockCount.put(blockId, blockCount.get(blockId)+1);
-               }
-               else{
-                    blockCount.put(blockId, 1);
-               }
-          }
+          super.add(blockId, client);
+
+          if(blockCount.containsKey(blockId)) blockCount.put(blockId, blockCount.get(blockId)+1);
+          else blockCount.put(blockId, 1);
      }
 
-     /**
-      * This method returns the Client object holding the block
-      *
-      * @param int blockId block id
-      */
-     public Client getClient(int blockId){
-          synchronized(cache){
-               if(bf.isSeen(""+blockId)){
-                    return cache.get(blockId);
-               }
-               return null;
-          }
-     }
-
+   
      /**
       * This method deletes the block id from the cache
       * and decrements the number of occurence in HashMap
       *
-      * @param int blockId block id
+      * @param int blockId block id to be deleted
+      * @param Client client client to be deleted
       */
-     public void delete(int blockId){
-          synchronized(cache){
-               cache.remove(blockId);
-               if(blockCount.containsKey(blockId)){
-                    if(blockCount.get(blockId)==1){
-                         blockCount.remove(blockId);
-                    }
-                    else{
-                        blockCount.put(blockId, blockCount.get(blockId)-1); 
-                    }
+     public void delete(int blockId, Client client){
+          super.delete(blockId, client);
+                         
+          if(blockCount.containsKey(blockId)){
+                if(blockCount.get(blockId)==1){
+                       blockCount.remove(blockId);
+                }
+                else{
+                     blockCount.put(blockId, blockCount.get(blockId)-1); 
+                }
+          }
+     }
+
+     /**
+      * This method gets client cache data and stores in global cache
+      */
+     protected void updateCache(){
+          for(int i=0; i<clients.length; i++){
+               LRUCache clientCache=clients[i].getCache();
+               Set set=clientCache.entrySet();
+               Iterator itr=set.iterator();
+
+               while(itr.hasNext()){
+                   Map.Entry me=(Map.Entry) itr.next();
+                   int blockId=(int)me.getKey();
+                   HashSet<Client> clientSet=null;
+                   if(cache.containsKey(blockId)) clientSet=(HashSet<Client>)cache.get(blockId);
+                   else clientSet=new HashSet<Client>();
+                   clientSet.add(clients[i]);
+                   cache.put(blockId, clientSet);
+                   
+                   synchronized(blockCount){
+                        if(i==0) blockCount.clear();
+                        if(blockCount.containsKey(blockId)) blockCount.put(blockId, blockCount.get(blockId)+1);
+                        else blockCount.put(blockId, 1);
+                   }     
                }
           }
      }
@@ -77,13 +89,13 @@ class NCManager extends Manager{
      /**
       * this method returns if a particular block is singlet
       *
-      * @param boolean true if singlet else false
+      * @param int blockId block being checked
+      * @return boolean true if singlet else false
       */
      public boolean isSinglet(int blockId){
-          synchronized(cache){
-               Integer count=blockCount.get(blockId);
-               if(count!=null) return (count==1);
-               return false;
-          }     
-     }     
+          Integer count=blockCount.get(blockId);
+          if(count!=null) return (count==1);
+          return false;
+     }
+    
 }

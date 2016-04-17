@@ -10,6 +10,9 @@ import java.io.FileOutputStream;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.Scanner;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Set;
 /**
  * This class initiates the experiment and has the main method
  *
@@ -39,9 +42,12 @@ class Simulator{
      
      private int increments;
      private int diskSize;
-     //private int mgrCacheSize;
-     //private int bfSize;
+     
      private String traceFile;
+
+     private int clientCacheTicks;
+     private int globalCacheTicks;
+     private int diskAccessTicks;
 
      /**
       * This method processes the input file and sets the parameters
@@ -57,10 +63,12 @@ class Simulator{
           cachingAlgo=Integer.parseInt(prop.getProperty("CachingAlgo"));
           bfType=Integer.parseInt(prop.getProperty("BFType"));
           diskSize=Integer.parseInt(prop.getProperty("DiskSize"));
-          //mgrCacheSize=Integer.parseInt(prop.getProperty("MgrCacheSize"));
-          //bfSize=Integer.parseInt(prop.getProperty("BFSize"));
           increments=Integer.parseInt(prop.getProperty("Increment"));
           traceFile=prop.getProperty("TraceFile");
+
+          clientCacheTicks=Integer.parseInt(prop.getProperty("ClientCacheTicks"));
+          globalCacheTicks=Integer.parseInt(prop.getProperty("GlobalCacheTicks"));
+          diskAccessTicks=Integer.parseInt(prop.getProperty("DiskAccessTicks"));
           
           if(exptType==1){
                minClientCacheSize=Integer.parseInt(prop.getProperty("MinClientCacheSize"));
@@ -84,7 +92,7 @@ class Simulator{
           if(exptType==1){
                
                FileWriter fwriter=new FileWriter("Clients-"+numOfClients+".csv");
-               fwriter.write("ClientCacheSize, CacheHits, DiskAccess, FalsePositive\n");
+               fwriter.write("ClientCacheSize, CacheHits, DiskAccess, FalsePositive, Ticks/Request, GlobalCacheSize\n");
                for(int i=minClientCacheSize; i<=maxClientCacheSize; i=i+increments){                    
                     System.out.println("Cache Size: "+i+"\t# Clients: "+numOfClients);
                     if(loadData(numOfClients, i)) runCachingAlgorithm(i, fwriter);
@@ -93,7 +101,7 @@ class Simulator{
           }
           else if(exptType==2){
                FileWriter fwriter=new FileWriter("CacheSize-"+clientCacheSize+".csv");
-               fwriter.write("#Clients, CacheHits, DiskAccess\n");
+               fwriter.write("#Clients, CacheHits/Client, DiskAccess/Client, FalsePositive/Client, Ticks/Request, GlobalCacheSize\n");
                for(int i=minNumOfClients; i<=maxNumOfClients; i=i+increments){
                     System.out.println("Cache Size: "+clientCacheSize+"\t# Clients: "+i);
                     if(loadData(i, clientCacheSize)) runCachingAlgorithm(i, fwriter);
@@ -112,20 +120,21 @@ class Simulator{
       * @return boolean true if loading data successfull or else false
       */
      private boolean loadData(int clients, int cacheSizeClient) throws FileNotFoundException, IOException{
-          server=new Server(diskSize);
+          server=new Server(diskSize, diskAccessTicks);
                     
           int bfSize=cacheSizeClient*clients*10;
           
-          if (bfType==1) mgr=getManager(clients*cacheSizeClient, new BloomFilter(bfSize), server);
-          else if (bfType==2) mgr=getManager(clients*cacheSizeClient, new ImpBloomFilter(bfSize), server);
+          if (bfType==1) mgr=getManager(clients*cacheSizeClient, new BloomFilter(bfSize), server, globalCacheTicks);
+          else if (bfType==2) mgr=getManager(clients*cacheSizeClient, new ImpBloomFilter(bfSize), server, globalCacheTicks);
           
           client=new Client[clients];
           bfSize=cacheSizeClient*10;
           for(int i=0; i<clients; i++){
-               if(bfType==1) client[i]=getClient(i, cacheSizeClient, new BloomFilter(bfSize), mgr, client);
-               else if(bfType==2) client[i]=getClient(i, cacheSizeClient, new ImpBloomFilter(bfSize), mgr, client);
+               if(bfType==1) client[i]=getClient(i, cacheSizeClient, new BloomFilter(bfSize), mgr, client, clientCacheTicks);
+               else if(bfType==2) client[i]=getClient(i, cacheSizeClient, new ImpBloomFilter(bfSize), mgr, client, clientCacheTicks);
           }
-          
+
+          mgr.setClients(client);          
           File file=new File(traceFile);
           FileReader freader=new FileReader(file);
           BufferedReader breader=new BufferedReader(freader);
@@ -139,11 +148,6 @@ class Simulator{
                if(line==null && i<clients-1) return false;
           }
 
-          /*for(int i=0; i<clients; i++){
-               client[i].display();
-          }
-          mgr.display();
-          System.out.println();*/
           return true;
      }
 
@@ -162,22 +166,28 @@ class Simulator{
 
           int hitCount=0;
           int falsePositive=0;
+          long ticks=0;
+          int reqCount=0;
           
           for(int i=0; i<client.length; i++){
                hitCount=hitCount+client[i].getHitCount();
                falsePositive=falsePositive+client[i].getFalsePositives();
+               ticks=ticks+client[i].getTotalTicks();
+               reqCount=reqCount+client[i].getRequestCount();
           }
-          System.out.println("Hit Count: "+ hitCount);
-          System.out.println("Disk Access: "+server.diskAccessCount());
-          writer.write(var+", "+hitCount+", "+server.diskAccessCount()+", "+falsePositive+"\n");
+          ticks=ticks+mgr.getTotalTicks();
+          ticks=ticks+server.getTotalTicks();
+          System.out.println("Manager: "+(((float)mgr.getCacheSize()/diskSize)*100));
+          System.out.println("Hit Count: "+ (((float)hitCount/reqCount)*100));
+          System.out.println("Disk Access: "+(((float)server.diskAccessCount()/reqCount)*100));
+          System.out.println("Ticks: "+((float)ticks/reqCount));
+          System.out.println();
+          
+          writer.write(var+", "+(((float)hitCount/reqCount)*100)+", "+(((float)server.diskAccessCount()/reqCount)*100)+", "
+          +(((float)falsePositive/reqCount)*100)+", "+(((float)ticks/reqCount))+","+(((float)mgr.getCacheSize()/diskSize)*100)+"\n");
      }
 
-     /*private CoopCaching getCoopCacheAlgo(){
-          if(cachingAlgo==1) return new GreedyForwarding();
-          else if(cachingAlgo==2) return new NChance();
-          else if(cachingAlgo==3) return new Robinhood();
-          return null;
-     }*/
+     
 
      /**
       * This method returns specific Client object for a caching algorithm
@@ -187,11 +197,12 @@ class Simulator{
       * @param Manager mgr the manager object
       * @param Client[] client list of client objects
       */
-     private Client getClient(int id, int cacheSize, BloomFilter bf, Manager mgr, Client[] client){
-          if(cachingAlgo==1) return new GFClient(id, cacheSize, bf, mgr);
-          else if(cachingAlgo==2) return new NCClient(id, cacheSize, bf, mgr, client);
-          //else if(cachingAlgo==3) return new Robinhood();
+     private Client getClient(int id, int cacheSize, BloomFilter bf, Manager mgr, Client[] client, int clientCacheTicks){
+          if(cachingAlgo==1) return new GFClient(id, cacheSize, bf, mgr, clientCacheTicks);
+          else if(cachingAlgo==2) return new NCClient(id, cacheSize, bf, mgr, client, clientCacheTicks);
+          else if(cachingAlgo==3) return new RHClient(id, cacheSize, bf, mgr, client, clientCacheTicks);
           return null;
+
      }
 
      /**
@@ -200,10 +211,10 @@ class Simulator{
       * @param BloomFilter bf bloomfilter object
       * @param Server server server object
       */
-     private Manager getManager(int cacheSize, BloomFilter bf, Server server){
-          if(cachingAlgo==1) return new GFManager(cacheSize, bf, server);
-          else if(cachingAlgo==2) return new NCManager(cacheSize, bf, server);
-          //else if(cachingAlgo==3) return new Robinhood();
+     private Manager getManager(int cacheSize, BloomFilter bf, Server server, int globalCacheTicks){
+          if(cachingAlgo==1) return new GFManager(cacheSize, bf, server, globalCacheTicks);
+          else if(cachingAlgo==2) return new NCManager(cacheSize, bf, server, globalCacheTicks);
+          else if(cachingAlgo==3) return new RHManager(cacheSize, bf, server, globalCacheTicks);
           return null;
      }
 
@@ -214,9 +225,6 @@ class Simulator{
       */
      public static void main(String[] args){
           try{
-               //System.out.print("Input File: ");
-               //Scanner sc=new Scanner(System.in);
-               //String inputFile=sc.nextLine();
                Simulator sim=new Simulator();
                sim.readInputFile(args[0]);
                sim.generateResults();

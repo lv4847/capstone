@@ -13,8 +13,8 @@ class GFClient extends Client{
       * @param BloomFilter bf the bloomfilter or IBF object
       * @param Manager mgr the manager object
       */
-     public GFClient(int id, int cacheSize, BloomFilter bf, Manager mgr){
-          super(id, cacheSize, bf, mgr);
+     public GFClient(int id, int cacheSize, BloomFilter bf, Manager mgr, int localCacheTicks){
+          super(id, cacheSize, bf, mgr, localCacheTicks);
      }
 
      /**
@@ -25,37 +25,18 @@ class GFClient extends Client{
       * @param Block data the data to be added to client cache
       */
      public void addBlock(Block data){
-          synchronized(cache){
-               Block lru=(Block)cache.getLRU();
-               cache.put(data.getId(), data);
-               if(lru!=null && cache.get(lru.getId())==null){
-                    int lruId=lru.getId();
-                    Client c=mgr.getClient(lruId);
-                    if(c!=null && c.id==this.id)
-                         mgr.delete(lruId);
-               }
-               bf.addSeenMember(""+data.getId());
-               mgr.add(data.getId(), this);
-         }      
-     }
+          synchronized(mgr){
+               synchronized(cache){
+                    Block lru=(Block)cache.getLRU();
+                    cache.put(data.getId(), data);
 
-     /**
-      * This method gets the data from the cache and adds
-      * hit count and false positive count
-      *
-      * @param int blockId the data with the block id or null if not present
-      */
-     public Block getBlock(int blockId){
-          synchronized(cache){
-               if(bf.isSeen(""+blockId)){
-                    Block block=cache.get(blockId);
-                    if(block!=null){
-                         hitCount++;
-                         return block;
+                    if(lru!=null && cache.get(lru.getId())==null && cache.size()==cacheSize){
+                         int lruId=lru.getId();
+                         mgr.delete(lruId, this);
                     }
-                    else falsePositive++;
+                    bf.addSeenMember(""+data.getId());
+                    mgr.add(data.getId(), this);
                }
-               return null;
           }      
      }
 }
